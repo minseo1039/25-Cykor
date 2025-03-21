@@ -214,6 +214,5 @@ int main()
     pop();
     pop();
     print_stack();
-    getchar();
     return 0;
 }
