@@ -37,16 +37,16 @@ char    stack_info[STACK_SIZE][20];     // Call Stack 요소에 대한 설명을
 */
 int SP = -1;
 int FP = -1;
-int local_index = 1;
+int local_index = 1; // 로컬 변수의 인덱스 순서서
 
-void init();
+void init(); // 스택 초기화 함수
 void func1(int arg1, int arg2, int arg3);
 void func2(int arg1, int arg2);
 void func3(int arg1);
-void prolog(int current_FP, char *info, int local);
-void epillogeu();
-void push(int value, char *info);
-void pop();
+void prolog(int current_FP, char *info, int local); // 프롤로그
+void epillogeu(); // 에필로그
+void push(int value, char *info); // 스택에 푸쉬
+void pop(); // 스택에서 팝
 
 /*  
     현재 call_stack 전체를 출력합니다.
@@ -56,7 +56,7 @@ void pop();
 void init()
 {
     int i;
-    for(i=0; i<STACK_SIZE; i++)
+    for(i=0; i<STACK_SIZE; i++) // call_stack의 모든 값을 -1로 초기화
     {
         call_stack[i] = -1;
     }
@@ -95,24 +95,24 @@ void func1(int arg1, int arg2, int arg3)
 {
     int var_1 = 100;
     int i;
-    int *p = &var_1;
+    int *p = &var_1; // 로컬 변수의 첫 번째 주소를 저장
     
     // func1의 스택 프레임 형성 (함수 프롤로그 + push)
-    push(arg3, "arg3");
+    push(arg3, "arg3"); // arg3, arg2, arg1 순서로 push
     push(arg2, "arg2");
     push(arg1, "arg1");
-    prolog(FP, "func1 SFP", 1);
-    for(i=0; i<1; i++)
+    prolog(FP, "func1 SFP", 1); // SFP, Return Address 순서로 push 그리고 로컬 변수 1개
+    for(i=0; i<1; i++) // 로컬 변수 1개 stack에 추가
     {
         call_stack[SP-i] = *p;
         sprintf(stack_info[SP-i], "var_%d", local_index++);
-        p += 1;
+        p += 1; // 다음 로컬 변수의 주소로 이동
     }
     print_stack();
     func2(11, 13);
     // func2의 스택 프레임 제거 (함수 에필로그 + pop)
     epillogeu();
-    pop();
+    pop(); // callee의 arg1, arg2 제거
     pop();
     print_stack();
 }
@@ -122,23 +122,23 @@ void func2(int arg1, int arg2)
 {
     int var_2 = 200;
     int i;
-    int *p = &var_2;
+    int *p = &var_2; // 로컬 변수의 첫 번째 주소를 저장
 
     // func2의 스택 프레임 형성 (함수 프롤로그 + push)
-    push(arg2, "arg2");
+    push(arg2, "arg2"); // arg2, arg1 순서로 push
     push(arg1, "arg1");
-    prolog(FP, "func2 SFP", 1);
+    prolog(FP, "func2 SFP", 1); // SFP, Return Address 순서로 push 그리고 로컬 변수 1개
     for(i=0; i<1; i++)
     {
         call_stack[SP-i] = *p;
         sprintf(stack_info[SP-i], "var_%d", local_index++);
-        p += 1;
+        p += 1; // 다음 로컬 변수의 주소로 이동
     }
     print_stack();
     func3(77);
     // func3의 스택 프레임 제거 (함수 에필로그 + pop)
     epillogeu();
-    pop();
+    pop(); // callee의 arg1 제거
     print_stack();
 }
 
@@ -148,16 +148,16 @@ void func3(int arg1)
     int var_3 = 300;
     int var_4 = 400;
     int i;
-    int *p = &var_3;
+    int *p = &var_3; // 로컬 변수의 첫 번째 주소를 저장
 
     // func3의 스택 프레임 형성 (함수 프롤로그 + push)
-    push(arg1, "arg1");
-    prolog(FP, "func3 SFP", 2);
-    for(i=0; i<2; i++)
+    push(arg1, "arg1"); // arg1 순서로 push
+    prolog(FP, "func3 SFP", 2); // SFP, Return Address 순서로 push 그리고 로컬 변수 2개
+    for(i=0; i<2; i++) // 로컬 변수 2개 stack에 추가
     {
         call_stack[SP-i] = *p;
         sprintf(stack_info[SP-i], "var_%d", local_index++);
-        p += 1;
+        p += 1; // 다음 로컬 변수의 주소로 이동
     }
     print_stack();
 }
@@ -165,10 +165,10 @@ void func3(int arg1)
 
 void prolog(int current_FP, char *info, int local)
 {
-    push(-1, "Return Address");
-    push(current_FP, info);
+    push(-1, "Return Address"); // Return Address push
+    push(current_FP, info); // SFP push
     FP = SP;
-    if(SP + local > STACK_SIZE)
+    if(SP + local > STACK_SIZE) // 로컬 변수의 개수가 STACK_SIZE를 넘어가는 경우
         perror("I cann't push the local values\n");
     SP += local;
 }
@@ -177,10 +177,10 @@ void prolog(int current_FP, char *info, int local)
 void epillogeu()
 {
     int temp = SP, i;
-    for(i=FP; i<=temp+1; i++)
+    for(i=FP; i<=temp+1; i++) // Return Address까지 pop
     {
-        if(strstr(stack_info[SP], "SFP"))
-            FP = call_stack[SP];
+        if(strstr(stack_info[SP], "SFP")) // SFP를 찾으면
+            FP = call_stack[SP]; // FP를 SFP로 변경
         pop();
     }
 }
@@ -188,7 +188,7 @@ void epillogeu()
 
 void push(int value, char *info)
 {
-    if(SP >= STACK_SIZE-1)
+    if(SP >= STACK_SIZE-1) // 스택이 가득 찬 경우
         perror("Stack is Full!\n");
     call_stack[++SP] = value;
     strcpy(stack_info[SP], info);
@@ -197,8 +197,8 @@ void push(int value, char *info)
 
 void pop()
 {
-    call_stack[SP] = -1;
-    stack_info[SP][0] = 0;
+    call_stack[SP] = -1; // pop된 call_stack을 초기화
+    stack_info[SP][0] = 0; // pop된 stack_info를 초기화
     SP--;
 }
 
@@ -206,11 +206,11 @@ void pop()
 //main 함수에 관련된 stack frame은 구현하지 않아도 됩니다.
 int main()
 {
-    init();
+    init(); // call_stack 초기화
     func1(1, 2, 3);
     // func1의 스택 프레임 제거 (함수 에필로그 + pop)
     epillogeu();
-    pop();
+    pop(); // callee의 arg1, arg2, arg3 제거
     pop();
     pop();
     print_stack();
