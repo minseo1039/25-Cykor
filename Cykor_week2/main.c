@@ -1,10 +1,10 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <unistd.h>
-#include <pwd.h>
+#include <string.h>
+#include <ctype.h>
 #include <sys/wait.h>
+#include <pwd.h>
 
 typedef struct node {
     char folder[256];
@@ -21,13 +21,11 @@ void free_path_list(Node *head);
 Node *load_current_path();
 void print_path(Node *head);
 void ltrim(char *str);
-void pipe_command(char *command);
-void run_command(char *args[]);
+int run_pipeline(char *cmd);
 
 void main_window() {
     printf("===============================================\n");
-    printf("2025.05.07.\n");
-    printf("\nWelcome to min's shell!\n\n");
+    printf("2025.05.07.\n\nWelcome to min's shell!\n\n");
     printf("Please enter the command you want to execute.\n");
     printf("If you want to exit, please enter 'exit'.\n");
     printf("===============================================\n");
@@ -53,7 +51,6 @@ void free_path_list(Node *head) {
 Node *load_current_path() {
     char cwd[1024];
     getcwd(cwd, sizeof(cwd));
-
     Node *head = NULL;
     Node *tail = NULL;
     char *folder = strtok(cwd, "/");
@@ -85,76 +82,103 @@ void ltrim(char *str) {
     memmove(str, p, strlen(p) + 1);
 }
 
-void pipe_command(char *command) {
+int run_pipeline(char *cmd) {
     char *args[20];
     int cnt = 0;
-    args[0] = strtok(command, "|");
+    args[cnt] = strtok(cmd, "|");
     while (args[cnt] != NULL) {
         ltrim(args[cnt]);
-        args[++cnt] = strtok(NULL, "|");
+        cnt++;
+        args[cnt] = strtok(NULL, "|");
     }
-    run_command(args);
-}
 
-void run_command(char *args[]) {
-    int i = 0;
-    if (args[i + 1] == NULL) {
-        // 마지막 명령어도 fork → execvp → waitpid 처리
-        pid_t pid = fork();
+    int fd[2], in_fd = STDIN_FILENO;
+    pid_t pid;
+    int status;
+
+    for (int i = 0; i < cnt; i++) {
+        pipe(fd);
+        pid = fork();
         if (pid == 0) {
-            char *cmd_args[20];
+            dup2(in_fd, STDIN_FILENO);
+            if (i != cnt - 1)
+                dup2(fd[1], STDOUT_FILENO);
+            close(fd[0]);
+            close(fd[1]);
+
+            char *argv[20];
             int j = 0;
-            cmd_args[j] = strtok(args[i], " ");
-            while (cmd_args[j] != NULL) {
-                cmd_args[++j] = strtok(NULL, " ");
+            argv[j] = strtok(args[i], " ");
+            while (argv[j] != NULL) {
+                argv[++j] = strtok(NULL, " ");
             }
-            execvp(cmd_args[0], cmd_args);
+            execvp(argv[0], argv);
             perror("execvp failed");
             exit(1);
         } else {
-            waitpid(pid, NULL, 0);
+            waitpid(pid, &status, 0);
+            close(fd[1]);
+            in_fd = fd[0];
         }
-    } else {
-        int pipefd[2];
-        if (pipe(pipefd) == -1) {
-            perror("pipe failed");
-            exit(1);
+    }
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
+
+void parse_and_execute(char *command) {
+    char *token = strtok(command, ";");
+    while (token != NULL) {
+        // && 처리
+        char *and_pos = strstr(token, "&&");
+        if (and_pos) {
+            *and_pos = '\0';
+            char *next = and_pos + 2;
+            ltrim(token);
+            ltrim(next);
+            int status = run_pipeline(token);
+            if (status == 0) run_pipeline(next);
+            token = strtok(NULL, ";");
+            continue;
         }
+
+        // || 처리
+        char *or_pos = strstr(token, "||");
+        if (or_pos) {
+            *or_pos = '\0';
+            char *next = or_pos + 2;
+            ltrim(token);
+            ltrim(next);
+            int status = run_pipeline(token);
+            if (status != 0) run_pipeline(next);
+            token = strtok(NULL, ";");
+            continue;
+        }
+
+        // 백그라운드 처리
+        int background = 0;
+        char *bg_pos = strstr(token, "&");
+        if (bg_pos) {
+            *bg_pos = '\0';
+            background = 1;
+        }
+        ltrim(token);
 
         pid_t pid = fork();
-        if (pid == -1) {
-            perror("fork failed");
-            exit(1);
-        }
-
         if (pid == 0) {
-            close(pipefd[0]);
-            dup2(pipefd[1], STDOUT_FILENO);
-            close(pipefd[1]);
-
-            char *cmd_args[20];
-            int j = 0;
-            cmd_args[j] = strtok(args[i], " ");
-            while (cmd_args[j] != NULL) {
-                cmd_args[++j] = strtok(NULL, " ");
-            }
-            execvp(cmd_args[0], cmd_args);
-            perror("execvp failed");
-            exit(1);
+            run_pipeline(token);
+            exit(0);
         } else {
-            close(pipefd[1]);
-            dup2(pipefd[0], STDIN_FILENO);
-            close(pipefd[0]);
-            run_command(&args[i + 1]);
-            waitpid(pid, NULL, 0);  // 부모가 자식 종료 기다림
+            if (!background) {
+                waitpid(pid, NULL, 0);
+            }
         }
+
+        token = strtok(NULL, ";");
     }
 }
 
-int main(void) {
+int main() {
     uid_t uid = getuid();
     char command[256];
-    int stdin_backup = dup(STDIN_FILENO);
     pw = getpwuid(uid);
     gethostname(hostname, sizeof(hostname));
     path_list = load_current_path();
@@ -169,7 +193,7 @@ int main(void) {
         }
         command[strcspn(command, "\n")] = 0;
 
-        // ----- 내장 명령어 처리 -----
+        // 내장 명령어 처리
         if (strncmp(command, "cd ", 3) == 0) {
             char *path = command + 3;
             ltrim(path);
@@ -191,9 +215,8 @@ int main(void) {
             break;
         }
 
-        // ----- 외부 명령어 처리 -----
-        pipe_command(command);
-        dup2(stdin_backup, STDIN_FILENO);
+        // 외부 명령어 및 연산자 처리
+        parse_and_execute(command);
     }
 
     free_path_list(path_list);
