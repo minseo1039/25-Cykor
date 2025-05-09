@@ -1,35 +1,43 @@
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<pwd.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <pwd.h>
+#include <sys/wait.h>
 
-typedef struct node{
-    char folder[256]; // 폴더 이름
+typedef struct node {
+    char folder[256];
     struct node *next;
-}Node;
+} Node;
 
 struct passwd *pw;
 char hostname[256];
+Node *path_list = NULL;
 
-void main_window() // 초기 화면을 출력하는 함수
-{
+void main_window();
+Node *create_node(char *folder);
+void free_path_list(Node *head);
+Node *load_current_path();
+void print_path(Node *head);
+void ltrim(char *str);
+void pipe_command(char *command);
+void run_command(char *args[]);
+
+void main_window() {
     printf("===============================================\n");
     printf("2025.05.07.\n");
-    printf("\n");
-    printf("Welcome to min's shell!\n");
-    printf("\n");
+    printf("\nWelcome to min's shell!\n\n");
     printf("Please enter the command you want to execute.\n");
     printf("If you want to exit, please enter 'exit'.\n");
     printf("===============================================\n");
 }
 
-Node *create_node(char *folder) // 노드를 생성하는 함수
-{
+Node *create_node(char *folder) {
     Node *new_node = (Node *)malloc(sizeof(Node));
     strcpy(new_node->folder, folder);
     new_node->next = NULL;
-    return new_node;    
+    return new_node;
 }
 
 void free_path_list(Node *head) {
@@ -42,32 +50,24 @@ void free_path_list(Node *head) {
     }
 }
 
-Node *load_current_path()
-{
+Node *load_current_path() {
     char cwd[1024];
     getcwd(cwd, sizeof(cwd));
 
     Node *head = NULL;
     Node *tail = NULL;
-
-    // strtok로 '/' 기준 분리
     char *folder = strtok(cwd, "/");
-    while(folder != NULL)
-    {
+    while (folder != NULL) {
         Node *new_node = create_node(folder);
-        if(head == NULL)
-        {
+        if (head == NULL) {
             head = new_node;
             tail = new_node;
-        }
-        else
-        {
+        } else {
             tail->next = new_node;
             tail = new_node;
         }
         folder = strtok(NULL, "/");
     }
-
     return head;
 }
 
@@ -79,59 +79,123 @@ void print_path(Node *head) {
     }
 }
 
-int main(void)
-{
-    uid_t uid = getuid();
-    int i, cnt=0;
-    char command[256];
-    Node *path_list = load_current_path();
+void ltrim(char *str) {
+    char *p = str;
+    while (*p && isspace((unsigned char)*p)) p++;
+    memmove(str, p, strlen(p) + 1);
+}
 
+void pipe_command(char *command) {
+    char *args[20];
+    int cnt = 0;
+    args[0] = strtok(command, "|");
+    while (args[cnt] != NULL) {
+        ltrim(args[cnt]);
+        args[++cnt] = strtok(NULL, "|");
+    }
+    run_command(args);
+}
+
+void run_command(char *args[]) {
+    int i = 0;
+    if (args[i + 1] == NULL) {
+        // 마지막 명령어도 fork → execvp → waitpid 처리
+        pid_t pid = fork();
+        if (pid == 0) {
+            char *cmd_args[20];
+            int j = 0;
+            cmd_args[j] = strtok(args[i], " ");
+            while (cmd_args[j] != NULL) {
+                cmd_args[++j] = strtok(NULL, " ");
+            }
+            execvp(cmd_args[0], cmd_args);
+            perror("execvp failed");
+            exit(1);
+        } else {
+            waitpid(pid, NULL, 0);
+        }
+    } else {
+        int pipefd[2];
+        if (pipe(pipefd) == -1) {
+            perror("pipe failed");
+            exit(1);
+        }
+
+        pid_t pid = fork();
+        if (pid == -1) {
+            perror("fork failed");
+            exit(1);
+        }
+
+        if (pid == 0) {
+            close(pipefd[0]);
+            dup2(pipefd[1], STDOUT_FILENO);
+            close(pipefd[1]);
+
+            char *cmd_args[20];
+            int j = 0;
+            cmd_args[j] = strtok(args[i], " ");
+            while (cmd_args[j] != NULL) {
+                cmd_args[++j] = strtok(NULL, " ");
+            }
+            execvp(cmd_args[0], cmd_args);
+            perror("execvp failed");
+            exit(1);
+        } else {
+            close(pipefd[1]);
+            dup2(pipefd[0], STDIN_FILENO);
+            close(pipefd[0]);
+            run_command(&args[i + 1]);
+            waitpid(pid, NULL, 0);  // 부모가 자식 종료 기다림
+        }
+    }
+}
+
+int main(void) {
+    uid_t uid = getuid();
+    char command[256];
+    int stdin_backup = dup(STDIN_FILENO);
     pw = getpwuid(uid);
     gethostname(hostname, sizeof(hostname));
-
+    path_list = load_current_path();
     main_window();
 
-    while(1)
-    {
-        char *args[20];
-        char *ptr;
-        cnt = 0;
+    while (1) {
         printf("%s@%s:", pw->pw_name, hostname);
         print_path(path_list);
-        printf("$");
-        fgets(command, sizeof(command), stdin);
-        command[strcspn(command, "\n")] = 0; // 개행 문자 제거
-        args[0] = strtok(command, " ");
-        while(args[cnt] != NULL)
-        {
-            args[++cnt] = strtok(NULL, " ");
+        printf("$ ");
+        if (fgets(command, sizeof(command), stdin) == NULL) {
+            break;
         }
-        if(strcmp(args[0], "exit") == 0) // exit 입력 시 종료
-        {
+        command[strcspn(command, "\n")] = 0;
+
+        // ----- 내장 명령어 처리 -----
+        if (strncmp(command, "cd ", 3) == 0) {
+            char *path = command + 3;
+            ltrim(path);
+            if (chdir(path) != 0) {
+                perror("cd failed");
+            } else {
+                free_path_list(path_list);
+                path_list = load_current_path();
+            }
+            continue;
+        }
+        if (strcmp(command, "pwd") == 0) {
+            print_path(path_list);
+            printf("\n");
+            continue;
+        }
+        if (strcmp(command, "exit") == 0) {
             printf("Exit the shell.\n");
             break;
         }
-        else if(strcmp(args[0], "pwd") == 0) // pwd 입력 시 현재 경로 출력
-        {
-            print_path(path_list);
-            printf("\n");
-        }
-        else if(strcmp(args[0], "cd") == 0) // cd 입력 시 경로 변경
-        {
-            if(chdir(args[1]) == -1) // 경로 변경 실패 시 오류 메시지 출력
-            {
-                perror("cd failed");
-            }
-            else // 경로 변경 성공 시 경로 리스트 업데이트
-            {
-                free_path_list(path_list); // 기존 경로 리스트 메모리 해제
-                path_list = load_current_path(); // 새로운 경로 리스트 로드
-            }
-        }
-        else // 잘못된 명령어 입력 시 오류 메시지 출력
-        {
-            printf("Invalid command. Please try again.\n");
-        }
+
+        // ----- 외부 명령어 처리 -----
+        pipe_command(command);
+        dup2(stdin_backup, STDIN_FILENO);
     }
+
+    free_path_list(path_list);
     return 0;
 }
