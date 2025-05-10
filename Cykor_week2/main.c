@@ -5,23 +5,16 @@
 #include <ctype.h>
 #include <sys/wait.h>
 #include <pwd.h>
-
-typedef struct node {
-    char folder[256];
-    struct node *next;
-} Node;
+#include "gen_func.h"
 
 struct passwd *pw;
 char hostname[256];
 Node *path_list = NULL;
 
 void main_window();
-Node *create_node(char *folder);
-void free_path_list(Node *head);
-Node *load_current_path();
 void print_path(Node *head);
-void ltrim(char *str);
 int run_pipeline(char *cmd);
+void parse_and_execute(char *command);
 
 void main_window() {
     printf("===============================================\n");
@@ -29,57 +22,6 @@ void main_window() {
     printf("Please enter the command you want to execute.\n");
     printf("If you want to exit, please enter 'exit'.\n");
     printf("===============================================\n");
-}
-
-Node *create_node(char *folder) {
-    Node *new_node = (Node *)malloc(sizeof(Node));
-    strcpy(new_node->folder, folder);
-    new_node->next = NULL;
-    return new_node;
-}
-
-void free_path_list(Node *head) {
-    Node *current = head;
-    Node *next;
-    while (current != NULL) {
-        next = current->next;
-        free(current);
-        current = next;
-    }
-}
-
-Node *load_current_path() {
-    char cwd[1024];
-    getcwd(cwd, sizeof(cwd));
-    Node *head = NULL;
-    Node *tail = NULL;
-    char *folder = strtok(cwd, "/");
-    while (folder != NULL) {
-        Node *new_node = create_node(folder);
-        if (head == NULL) {
-            head = new_node;
-            tail = new_node;
-        } else {
-            tail->next = new_node;
-            tail = new_node;
-        }
-        folder = strtok(NULL, "/");
-    }
-    return head;
-}
-
-void print_path(Node *head) {
-    Node *current = head;
-    while (current != NULL) {
-        printf("/%s", current->folder);
-        current = current->next;
-    }
-}
-
-void ltrim(char *str) {
-    char *p = str;
-    while (*p && isspace((unsigned char)*p)) p++;
-    memmove(str, p, strlen(p) + 1);
 }
 
 int run_pipeline(char *cmd) {
