@@ -1,7 +1,7 @@
 #ifndef GEN_FUNC_H
 #define GEN_FUNC_H
 
-typedef struct node {
+typedef struct node { // 노드 구조체 정의
     char folder[256];
     struct node *next;
 } Node;
