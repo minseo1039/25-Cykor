@@ -6,9 +6,7 @@
 #include <sys/wait.h>
 #include <pwd.h>
 #include "gen_func.h"
-
-struct passwd *pw;
-char hostname[256];
+#include "color.h"
 
 void main_window();
 void print_path(Node *head);
@@ -120,6 +118,8 @@ void parse_and_execute(char *command) {
 int main() {
     uid_t uid = getuid();
     char command[256];
+    char hostname[256];
+    struct passwd *pw;
     Node *path_list = NULL;
     pw = getpwuid(uid);
     gethostname(hostname, sizeof(hostname));
@@ -127,8 +127,10 @@ int main() {
     main_window();
 
     while (1) {
-        printf("%s@%s:", pw->pw_name, hostname);
+        printf("%s%s", YELLOW, "min's Shell:");
+        printf("%s%s@%s%s:", GREEN, pw->pw_name, hostname, BLUE);
         print_path(path_list);
+        printf("%s ", RESET);
         printf("$ ");
         if (fgets(command, sizeof(command), stdin) == NULL) {
             break;
