@@ -9,7 +9,6 @@
 
 struct passwd *pw;
 char hostname[256];
-Node *path_list = NULL;
 
 void main_window();
 void print_path(Node *head);
@@ -121,6 +120,7 @@ void parse_and_execute(char *command) {
 int main() {
     uid_t uid = getuid();
     char command[256];
+    Node *path_list = NULL;
     pw = getpwuid(uid);
     gethostname(hostname, sizeof(hostname));
     path_list = load_current_path();
