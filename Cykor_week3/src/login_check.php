@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 $conn = mysqli_connect("localhost", "root", "", "cykor_db");
 
 if (!$conn) {
@@ -12,6 +14,7 @@ $sql = "SELECT * FROM users WHERE username='$username' AND password='$password'"
 $result = mysqli_query($conn, $sql);
 
 if (mysqli_num_rows($result) === 1) {
+    $_SESSION['username'] = $username;
     echo "login Success!";
     echo "<br><a href='./index.php'>Main Page</a>";
 } else {
