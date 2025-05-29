@@ -15,6 +15,7 @@ session_start();
         <li><a href = "./index.php">Main</a></li>
         <li><a href = "./login.php">Login</a></li>
         <li><a href = "./register.php">Register</a></li>
+        <li><a href = "./list.php">List</a></li>
     </ul>
 
     <?php

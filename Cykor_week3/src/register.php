@@ -10,6 +10,7 @@
         <li><a href = "./index.php">Main</a></li>
         <li><a href = "./login.php">Login</a></li>
         <li><a href = "./register.php">Register</a></li>
+        <li><a href = "./list.php">List</a></li>
     </ul>
     <form action="./insert_user.php" method="post">
         <label for="new_username">Username:</label>
