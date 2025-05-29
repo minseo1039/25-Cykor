@@ -1,5 +1,6 @@
 <?php
 session_start();
+$conn = mysqli_connect("localhost", "root", "", "cykor_db");
 ?>
 
 <!DOCTYPE html>
@@ -26,5 +27,21 @@ session_start();
     ?>
 
     <h3>List</h3>
+    <?php
+    $sql = "SELECT title, writer FROM posts";
+    $result = mysqli_query($conn, $sql);
+
+    if (mysqli_num_rows($result) > 0) {
+        echo "<ul>";
+        while ($row = mysqli_fetch_assoc($result)) {
+            echo "<li><strong>" . htmlspecialchars($row['title']) . "</strong> by " . htmlspecialchars($row['writer']) . "</li>";
+        }
+        echo "</ul>";
+    } else {
+        echo "<p>No posts yet.</p>";
+    }
+
+    mysqli_close($conn);
+    ?>
 </body>
 </html>
