@@ -11,12 +11,12 @@
         <li><a href = "./login.php">Login</a></li>
         <li><a href = "./register.php">Register</a></li>
     </ul>
-    <form action="./login.php" method="post">
+    <form action="./login_check.php" method="post">
         <label for="username">Username:</label>
-        <input type="text" id="username" name="Username">
+        <input type="text" id="username" name="username">
         <br>
         <label for="password">Password:</label>
-        <input type="password" id="password" name="Password">
+        <input type="password" id="password" name="password">
         <br>
         <button type="submit">Login</button>
     </form>
