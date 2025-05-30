@@ -13,9 +13,16 @@ $conn = mysqli_connect("localhost", "root", "", "cykor_db");
     <h1>List Page</h1>
     <h2>Welcome to Song Min Seo's Cykor Week 3</h2>
     <ul>
-        <li><a href = "./index.php">Main</a></li>
-        <li><a href = "./login.php">Login</a></li>
-        <li><a href = "./register.php">Register</a></li>
+        <li><a href="./index.php">Main</a></li>
+        <?php
+        if (isset($_SESSION['username'])) {
+            echo "<li><a href='./logout.php'>Logout</a></li>";
+        }
+        else {
+            echo "<li><a href='./login.php'>Login</a></li>";
+            echo "<li><a href='./register.php'>Register</a></li>";
+        }
+        ?>
         <li><a href = "./list.php">List</a></li>
     </ul>
 
@@ -34,7 +41,7 @@ $conn = mysqli_connect("localhost", "root", "", "cykor_db");
     if (mysqli_num_rows($result) > 0) {
         echo "<ul>";
         while ($row = mysqli_fetch_assoc($result)) {
-            echo "<li><strong>" . htmlspecialchars($row['title']) . "</strong> by " . htmlspecialchars($row['writer']) . "</li>";
+            echo "<li><strong><a href='view.php?title=" . urlencode($row['title']) . "'>" . htmlspecialchars($row['title']) . "</a></strong> by " . htmlspecialchars($row['writer']) . "</li>";
         }
         echo "</ul>";
     } else {
