@@ -1,8 +1,8 @@
 <?php
 $host = 'localhost';
-$dbname = 'your_database';
-$user = 'your_username';
-$pass = 'your_password';
+$dbname = 'cykor_db';
+$user = 'root';
+$pass = '1234';
 
 $conn = new mysqli($host, $user, $pass, $dbname);
 

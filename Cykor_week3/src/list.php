@@ -1,6 +1,6 @@
 <?php
 session_start();
-$conn = mysqli_connect("localhost", "root", "", "cykor_db");
+$conn = mysqli_connect("localhost", "root", "1234", "cykor_db");
 ?>
 
 <!DOCTYPE html>
