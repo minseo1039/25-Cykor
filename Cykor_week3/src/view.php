@@ -34,6 +34,7 @@ $post = mysqli_fetch_assoc($result);
     <?php
     if (isset($_SESSION['username']) && $_SESSION['username'] === $post['writer']) {
         echo "<a href='edit.php?title=" . $post['title'] . "'><button>Edit</button></a>";
+        echo "<a href='delete.php?title=" . $post['title'] . "'><button>삭제하기</button></a>";
     }
     ?>
     <br><br>
