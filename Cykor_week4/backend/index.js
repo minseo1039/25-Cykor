@@ -20,12 +20,21 @@ app.post('/api/post', (req, res) => {
 });
 
 app.delete('/api/post/:id', (req, res) => {
-  const id = number(req.params,id);
+  const id = Number(req.params.id);
   const index = post.findIndex(p => p.id === id);
   if (index !== -1) {
-    psot.splice(index, 1);
+    post.splice(index, 1);
     res.status(200).json({ message: 'Delete Done'});
   }
+});
+
+app.put('/api/post/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const { title, content } = req.body;
+  const postIndex = post.findIndex(p => p.id === id);
+
+  post[postIndex] = { id, title, content };
+  res.status(200).json(post[postIndex]);
 });
 
 app.listen(port, () => {
