@@ -15,39 +15,43 @@ function Board() {
     e.preventDefault();
 
     if (edit_id === null) {
-      const res = await fetch('/api/post', {
+      await fetch('/api/post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
       });
-      const newPost = await res.json();
-      setPosts([...posts, newPost]);
+
+      const res = await fetch('/api/post');
+      const data = await res.json();
+      setPosts(data);
       setForm({ title: '', content: '' });
-    }
-    else {
-      const res = await fetch(`/api/post/${edit_id}`, {
+    } else {
+      await fetch(`/api/post/${edit_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
       });
-      const updated = await res.json();
-      setPosts(posts.map(p => p.id === edit_id ? updated : p));
-      set_edit_id(null);
-    }
 
-    setForm({ title: '', content: '' });
+      const res = await fetch('/api/post');
+      const data = await res.json();
+      setPosts(data);
+      set_edit_id(null);
+      setForm({ title: '', content: '' });
+    }
   };
 
   const deletePost = async (id) => {
     await fetch(`/api/post/${id}`, {
       method: 'DELETE',
     });
-    setPosts(posts.filter(p => p.id !== id));
+    const res = await fetch('/api/post');
+    const data = await res.json();
+    setPosts(data);
   };
 
   const startEdit = (p) => {
     setForm({ title: p.title, content: p.content });
-    set_edit_id(p.id);
+    set_edit_id(p._id);
   };
 
   return (
@@ -79,10 +83,10 @@ function Board() {
 
       <ul>
         {posts.map(p => (
-          <li key={p.id}>
+          <li key={p._id}>
             <strong>{p.title}</strong><br/>
             {p.content}<br/>
-            <button onClick={() => deletePost(p.id)}>Delete</button>
+            <button onClick={() => deletePost(p._id)}>Delete</button>
             <button onClick={() => startEdit(p)}>Edit</button>
           </li>
         ))}
