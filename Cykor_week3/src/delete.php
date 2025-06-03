@@ -1,5 +1,5 @@
 <?php
-$conn = mysqli_connect("localhost", "root", "1234", "cykor_db");
+$conn = mysqli_connect("db", "root", "1234", "cykor_db");
 
 if (!$conn) {
     die("DB fail: " . mysqli_connect_error());
