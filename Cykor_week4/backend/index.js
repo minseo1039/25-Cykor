@@ -19,6 +19,15 @@ app.post('/api/post', (req, res) => {
   res.status(201).json(newPost);
 });
 
+app.delete('/api/post/:id', (req, res) => {
+  const id = number(req.params,id);
+  const index = post.findIndex(p => p.id === id);
+  if (index !== -1) {
+    psot.splice(index, 1);
+    res.status(200).json({ message: 'Delete Done'});
+  }
+});
+
 app.listen(port, () => {
   console.log("Cykor Backend 실행중");
 });

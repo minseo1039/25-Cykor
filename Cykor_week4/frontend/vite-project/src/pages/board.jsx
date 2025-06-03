@@ -22,6 +22,13 @@ function Board() {
     setForm({ title: '', content: '' });
   };
 
+  const deletePost = async (id) => {
+    await fetch('/api/post/${id}', {
+      method: 'DELETE',
+    });
+    setPosts(posts.filter(p => p.id !== id));
+  };
+
   return (
     <div>
       <h1>Board</h1>
@@ -31,23 +38,24 @@ function Board() {
           value={form.title}
           onChange={e => setForm({ ...form, title: e.target.value })}
         />
-        <br />
+        <br/>
         <textarea
           placeholder="Content"
           value={form.content}
           onChange={e => setForm({ ...form, content: e.target.value })}
         ></textarea>
-        <br />
+        <br/>
         <button type="submit">Write</button>
       </form>
 
-      <hr />
+      <hr/>
 
       <ul>
         {posts.map(p => (
           <li key={p.id}>
             <strong>{p.title}</strong><br />
-            {p.content}
+            {p.content}<br/>
+            <button onClick={() => deletePost(p.id)}>Delete</button>
           </li>
         ))}
       </ul>
